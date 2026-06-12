@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<vvod_ostatky version="3">
+    <trade_participant_inn>7777777777</trade_participant_inn>
+    <products_list>
+        <product>
+            <ki>010461111111111121LLLLLLLLLLLLL</ki>
+            <country>056</country>
+            <declaration_date>2021-10-10</declaration_date>
+            <declaration_number>87654321/654321/7654321</declaration_number>
+            <certificate_document_data>
+                <product>
+                    <certificate_type>CONFORMITY_CERTIFICATE</certificate_type>
+                    <certificate_number>1234</certificate_number>
+                    <certificate_date>2021-10-10</certificate_date>
+                </product>
+            </certificate_document_data>
+        </product>
+    </products_list>
+</vvod_ostatky>

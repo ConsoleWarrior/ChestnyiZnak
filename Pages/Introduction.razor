@@ -1,0 +1,581 @@
+@page "/introduction"
+@using System.Text
+@using System.Text.RegularExpressions
+@inject ExcelTemplateService ExcelTemplate
+@inject ExcelParserService ExcelParser
+@inject CsvCodeParserService CsvParser
+@inject IntroductionXmlService XmlBuilder
+@inject XsdValidationService XsdValidation
+@inject IJSRuntime JS
+
+<PageTitle>Ввод в оборот — генератор XML | Честный Знак</PageTitle>
+
+<div class="container py-4">
+
+    <div class="text-center mb-5">
+        <h1 class="fw-bold">Ввод в оборот</h1>
+        <p class="lead text-muted">
+            Загрузите список кодов маркировки (КИ), выберите тип документа —
+            и получите готовый XML по официальной схеме ГИС МТ.
+        </p>
+        <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle p-2">
+            🔒 Всё считается в браузере · официальные XSD ГИС МТ
+        </span>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+
+            <!-- ШАГ 1 -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <span class="badge bg-primary rounded-circle me-2">1</span>
+                        Скачайте шаблон Excel
+                    </h5>
+                    <p class="card-text text-muted">
+                        Одна колонка — <b>Код маркировки</b> (КИ). В текстовом формате, ведущие нули не потеряются.
+                    </p>
+                    <button class="btn btn-primary btn-lg" @onclick="DownloadTemplateAsync" disabled="@isGenerating">
+                        @if (isGenerating)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            <span>Формируем файл…</span>
+                        }
+                        else
+                        {
+                            <span>⬇️ Скачать образец Excel</span>
+                        }
+                    </button>
+                </div>
+            </div>
+
+            <!-- ШАГ 2 -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <span class="badge bg-primary rounded-circle me-2">2</span>
+                        Загрузите коды
+                    </h5>
+                    <p class="card-text text-muted">
+                        Наш Excel-шаблон <b>или</b> готовая CSV-выгрузка кодов из СУЗ/ЛК
+                        («Документы» → «Коды маркировки» → выгрузить в CSV).
+                    </p>
+                    <InputFile class="form-control" accept=".xlsx,.csv,.txt" OnChange="OnFileSelectedAsync" disabled="@isParsing" />
+
+                    @if (isParsing)
+                    {
+                        <div class="mt-3 text-muted">
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            Читаем файл…
+                        </div>
+                    }
+
+                    @if (parseResult is not null && !isParsing)
+                    {
+                        @if (parseResult.FileErrors.Count > 0)
+                        {
+                            <div class="alert alert-danger mt-3 mb-0">
+                                @foreach (var err in parseResult.FileErrors)
+                                {
+                                    <div>⛔ @err</div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mt-3">
+                                <div class="d-flex gap-2 mb-2">
+                                    <span class="badge bg-success">Корректных кодов: @parseResult.ValidCount</span>
+                                    @if (parseResult.InvalidCount > 0)
+                                    {
+                                        <span class="badge bg-danger">С ошибками: @parseResult.InvalidCount</span>
+                                    }
+                                </div>
+
+                                <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+                                    <table class="table table-sm table-bordered align-middle small mb-0">
+                                        <thead class="table-light position-sticky top-0">
+                                            <tr>
+                                                <th style="width: 40px;">#</th>
+                                                <th>Код маркировки (КИ)</th>
+                                                <th style="width: 90px;">Статус</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var row in parseResult.Rows)
+                                            {
+                                                <tr class="@(row.IsValid ? "" : "table-danger")">
+                                                    <td class="text-muted">@row.RowNumber</td>
+                                                    <td class="text-break font-monospace">@row.MarkingCode</td>
+                                                    <td>
+                                                        @if (row.IsValid)
+                                                        {
+                                                            <span class="text-success">✓</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-danger" title="@string.Join("; ", row.Errors)">✗</span>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+
+            <!-- ШАГ 3 -->
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <span class="badge bg-primary rounded-circle me-2">3</span>
+                        Реквизиты и скачивание XML
+                    </h5>
+
+                    <div class="mb-3">
+                        <label class="form-label">Тип документа</label>
+                        <select class="form-select" @bind="docType">
+                            <option value="@IntroductionType.ProductionRf">Производство РФ</option>
+                            <option value="@IntroductionType.Contract">Контрактное производство</option>
+                            <option value="@IntroductionType.Remains">Маркировка остатков</option>
+                            <option value="@IntroductionType.ImportFts">Импорт с ФТС</option>
+                            <option value="@IntroductionType.ProductionOutsideEaeu">Производство вне ЕАЭС</option>
+                        </select>
+                        <div class="form-text">@DocTypeHint</div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        @if (docType == IntroductionType.ProductionRf)
+                        {
+                            <div class="col-md-6">
+                                <label class="form-label">ИНН участника оборота</label>
+                                <input class="form-control @InnCssClass(participantInn)" @bind="participantInn" @bind:event="oninput" placeholder="10 или 12 цифр" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Дата производства</label>
+                                <input type="date" class="form-control" @bind="productionDate" />
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="sameEntity" @bind="sameEntity" />
+                                    <label class="form-check-label" for="sameEntity">
+                                        Производитель и собственник — то же лицо (тот же ИНН)
+                                    </label>
+                                </div>
+                            </div>
+                            @if (!sameEntity)
+                            {
+                                <div class="col-md-6">
+                                    <label class="form-label">ИНН производителя</label>
+                                    <input class="form-control @InnCssClass(producerInn)" @bind="producerInn" @bind:event="oninput" placeholder="10 или 12 цифр" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">ИНН собственника</label>
+                                    <input class="form-control @InnCssClass(ownerInn)" @bind="ownerInn" @bind:event="oninput" placeholder="10 или 12 цифр" />
+                                </div>
+                            }
+                        }
+                        else if (docType == IntroductionType.Contract)
+                        {
+                            <div class="col-md-6">
+                                <label class="form-label">ИНН производителя</label>
+                                <input class="form-control @InnCssClass(producerInn)" @bind="producerInn" @bind:event="oninput" placeholder="10 или 12 цифр" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">ИНН собственника</label>
+                                <input class="form-control @InnCssClass(ownerInn)" @bind="ownerInn" @bind:event="oninput" placeholder="10 или 12 цифр" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Дата производства</label>
+                                <input type="date" class="form-control" @bind="productionDate" />
+                            </div>
+                        }
+                        else if (docType == IntroductionType.Remains)
+                        {
+                            <div class="col-md-6">
+                                <label class="form-label">ИНН участника оборота</label>
+                                <input class="form-control @InnCssClass(participantInn)" @bind="participantInn" @bind:event="oninput" placeholder="10 или 12 цифр" />
+                            </div>
+                        }
+                        else if (docType == IntroductionType.ImportFts)
+                        {
+                            <div class="col-md-6">
+                                <label class="form-label">ИНН участника оборота</label>
+                                <input class="form-control @InnCssClass(participantInn)" @bind="participantInn" @bind:event="oninput" placeholder="10 или 12 цифр" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Номер декларации на товары (ДТ)</label>
+                                <input class="form-control" @bind="declarationNumber" @bind:event="oninput" placeholder="11111111/222222/3333333" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Дата регистрации ДТ</label>
+                                <input type="date" class="form-control" @bind="declarationDate" />
+                            </div>
+                        }
+                        else
+                        {
+                            @* Производство вне ЕАЭС *@
+                            <div class="col-md-6">
+                                <label class="form-label">ИНН участника оборота</label>
+                                <input class="form-control @InnCssClass(participantInn)" @bind="participantInn" @bind:event="oninput" placeholder="10 или 12 цифр" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Дата регистрации ДТ</label>
+                                <input type="date" class="form-control" @bind="declarationDate" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Номер декларации на товары (ДТ)</label>
+                                <input class="form-control" @bind="declarationNumber" @bind:event="oninput" placeholder="12345678/123456/1234567" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Код таможенного органа</label>
+                                <input class="form-control" @bind="customsCode" @bind:event="oninput" placeholder="8 цифр, напр. 10000000" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Код принятого решения</label>
+                                <input class="form-control" @bind="decisionCode" @bind:event="oninput" placeholder="напр. 10" />
+                            </div>
+                        }
+                    </div>
+
+                    <button class="btn btn-success btn-lg" @onclick="DownloadXmlAsync" disabled="@(!CanGenerate || isGeneratingXml)">
+                        @if (isGeneratingXml)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            <span>Формируем XML…</span>
+                        }
+                        else
+                        {
+                            <span>⬇️ Сформировать и скачать XML</span>
+                        }
+                    </button>
+
+                    @if ((parseResult?.ValidCount ?? 0) == 0)
+                    {
+                        <div class="form-text">Кнопка станет активной после загрузки кодов (Шаг 2).</div>
+                    }
+                    else if (!CanGenerate)
+                    {
+                        <div class="form-text text-warning-emphasis">Заполните все обязательные поля корректно (ИНН — 10 или 12 цифр).</div>
+                    }
+                </div>
+            </div>
+
+            <!-- ШАГ 4 (необязательно): проверка по официальной XSD -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <span class="badge bg-secondary rounded-circle me-2">4</span>
+                        Проверка по официальной XSD <span class="text-muted fs-6">(необязательно)</span>
+                    </h5>
+                    <p class="card-text text-muted">
+                        Нужна 100% гарантия, что ГИС МТ примет файл? Приложите актуальные схемы —
+                        мы проверим сгенерированный XML прямо в браузере. Схемы периодически обновляются,
+                        поэтому брать их лучше свежими из официального источника.
+                    </p>
+                    <div class="alert alert-light border small">
+                        Где взять: <a href="https://docs.crpt.ru/gismt/Раздел_шаблоны_документов/" target="_blank">страница шаблонов ГИС МТ</a>
+                        → раздел «Ввод в оборот» → файлы <b>@RecommendedXsdName</b> и <b>LP_base_types.xsd</b>
+                        (под выбранный тип документа).
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Основная схема (@RecommendedXsdName)</label>
+                            <InputFile class="form-control" accept=".xsd" OnChange="OnMainXsdSelected" />
+                            @if (mainXsdName is not null)
+                            {
+                                <div class="form-text text-success">✓ @mainXsdName</div>
+                            }
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Базовые типы (LP_base_types.xsd)</label>
+                            <InputFile class="form-control" accept=".xsd" OnChange="OnBaseXsdSelected" />
+                            @if (baseXsdName is not null)
+                            {
+                                <div class="form-text text-success">✓ @baseXsdName</div>
+                            }
+                        </div>
+                    </div>
+
+                    <button class="btn btn-outline-secondary mt-3" @onclick="ValidateAsync"
+                            disabled="@(!CanGenerate || mainXsdBytes is null || baseXsdBytes is null || isValidating)">
+                        @if (isValidating)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            <span>Проверяем…</span>
+                        }
+                        else
+                        {
+                            <span>🔍 Проверить XML по схеме</span>
+                        }
+                    </button>
+                    @if (!CanGenerate)
+                    {
+                        <div class="form-text">Сначала загрузите коды и заполните ИНН (шаги 2–3).</div>
+                    }
+                    else if (mainXsdBytes is null || baseXsdBytes is null)
+                    {
+                        <div class="form-text">Приложите оба файла схемы выше.</div>
+                    }
+
+                    @if (validationResult is not null)
+                    {
+                        @if (validationResult.IsValid)
+                        {
+                            <div class="alert alert-success mt-3 mb-0">
+                                ✅ XML соответствует схеме — можно загружать в ГИС МТ.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-danger mt-3 mb-0">
+                                <div class="fw-bold mb-1">❌ Найдены несоответствия:</div>
+                                <ul class="mb-0 small">
+                                    @foreach (var m in validationResult.Messages)
+                                    {
+                                        <li>@m</li>
+                                    }
+                                </ul>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h6 class="card-title">Типы документов</h6>
+                    <p class="small text-muted mb-0">
+                        Поддержаны: <b>производство РФ</b>, <b>контрактное производство</b> и
+                        <b>маркировка остатков</b> — выберите тип в Шаге 3. Импорт с ФТС добавим отдельно.
+                    </p>
+                </div>
+            </div>
+
+            <div class="border rounded d-flex align-items-center justify-content-center text-muted small bg-light"
+                 style="min-height: 250px;">
+                Рекламный блок РСЯ
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@code {
+    private bool isGenerating;
+    private bool isGeneratingXml;
+    private bool isParsing;
+    private ParseResult? parseResult;
+
+    // Тип документа и реквизиты
+    private IntroductionType docType = IntroductionType.ProductionRf;
+    private string participantInn = "";
+    private string producerInn = "";
+    private string ownerInn = "";
+    private bool sameEntity = true;
+    private DateOnly? productionDate = DateOnly.FromDateTime(DateTime.Today);
+
+    // Поля таможенной декларации (для импортных типов)
+    private string declarationNumber = "";
+    private DateOnly? declarationDate = DateOnly.FromDateTime(DateTime.Today);
+    private string customsCode = "";
+    private string decisionCode = "";
+
+    private string DocTypeHint => docType switch
+    {
+        IntroductionType.ProductionRf => "Товар произведён вами в РФ.",
+        IntroductionType.Contract => "Товар произведён по договору: производитель и собственник — разные лица.",
+        IntroductionType.Remains => "Маркировка ранее не маркированных остатков на складе.",
+        IntroductionType.ImportFts => "Импорт по декларации на товары (ДТ), сведения из ФТС.",
+        IntroductionType.ProductionOutsideEaeu => "Товар произведён/ввезён из-за пределов ЕАЭС, с данными таможенного оформления.",
+        _ => ""
+    };
+
+    private string RecommendedXsdName => docType switch
+    {
+        IntroductionType.ProductionRf => "Производство_РФ.xsd",
+        IntroductionType.Contract => "Контрактное_производство_РФ.xsd",
+        IntroductionType.Remains => "Маркировка_остатков.xsd",
+        IntroductionType.ImportFts => "Ввод_в_оборот_Импорт_с_ФТС.xsd",
+        IntroductionType.ProductionOutsideEaeu => "Производство_вне_ЕАЭС.xsd",
+        _ => ""
+    };
+
+    // XSD-валидация (необязательная)
+    private bool isValidating;
+    private byte[]? mainXsdBytes;
+    private byte[]? baseXsdBytes;
+    private string? mainXsdName;
+    private string? baseXsdName;
+    private XsdValidationService.Result? validationResult;
+
+    private const long MaxFileSize = 10 * 1024 * 1024;
+    private const long MaxXsdSize = 5 * 1024 * 1024;
+
+    private static bool IsInnValid(string inn) => Regex.IsMatch(inn?.Trim() ?? "", @"^\d{10}$|^\d{12}$");
+
+    private static string InnCssClass(string inn)
+        => string.IsNullOrEmpty(inn) ? "" : (IsInnValid(inn) ? "is-valid" : "is-invalid");
+
+    private bool CanGenerate =>
+        (parseResult?.ValidCount ?? 0) > 0 && InnFieldsValid;
+
+    // Какие поля обязательны — зависит от типа документа.
+    private bool InnFieldsValid => docType switch
+    {
+        IntroductionType.ProductionRf =>
+            IsInnValid(participantInn) && (sameEntity || (IsInnValid(producerInn) && IsInnValid(ownerInn))),
+        IntroductionType.Contract => IsInnValid(producerInn) && IsInnValid(ownerInn),
+        IntroductionType.Remains => IsInnValid(participantInn),
+        IntroductionType.ImportFts =>
+            IsInnValid(participantInn) && !string.IsNullOrWhiteSpace(declarationNumber) && declarationDate is not null,
+        IntroductionType.ProductionOutsideEaeu =>
+            IsInnValid(participantInn) && !string.IsNullOrWhiteSpace(declarationNumber) && declarationDate is not null
+            && !string.IsNullOrWhiteSpace(customsCode) && !string.IsNullOrWhiteSpace(decisionCode),
+        _ => false
+    };
+
+    // Собирает параметры документа из формы по текущему типу.
+    private IntroductionXmlService.IntroduceParams BuildParams()
+    {
+        var participant = participantInn.Trim();
+        return docType switch
+        {
+            IntroductionType.ProductionRf => new(docType, participant,
+                sameEntity ? participant : producerInn.Trim(),
+                sameEntity ? participant : ownerInn.Trim(),
+                productionDate),
+            IntroductionType.Contract => new(docType, null, producerInn.Trim(), ownerInn.Trim(), productionDate),
+            IntroductionType.Remains => new(docType, participant, null, null, null),
+            IntroductionType.ImportFts => new(docType, participant, null, null, null,
+                DeclarationNumber: declarationNumber.Trim(), DeclarationDate: declarationDate),
+            IntroductionType.ProductionOutsideEaeu => new(docType, participant, null, null, null,
+                DeclarationNumber: declarationNumber.Trim(), DeclarationDate: declarationDate,
+                CustomsCode: customsCode.Trim(), DecisionCode: decisionCode.Trim()),
+            _ => throw new ArgumentOutOfRangeException()
+        };
+    }
+
+    private async Task OnFileSelectedAsync(InputFileChangeEventArgs e)
+    {
+        isParsing = true;
+        parseResult = null;
+        try
+        {
+            var name = e.File.Name.ToLowerInvariant();
+            if (name.EndsWith(".csv") || name.EndsWith(".txt"))
+            {
+                // CSV/TXT-выгрузка кодов из СУЗ. Коды — ASCII, поэтому читаем как UTF-8
+                // (даже если файл в Windows-1251, ASCII-коды прочитаются корректно).
+                using var reader = new StreamReader(
+                    e.File.OpenReadStream(MaxFileSize), Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+                var text = await reader.ReadToEndAsync();
+                parseResult = CsvParser.Parse(text);
+            }
+            else
+            {
+                using var ms = new MemoryStream();
+                await e.File.OpenReadStream(MaxFileSize).CopyToAsync(ms);
+                ms.Position = 0;
+                parseResult = ExcelParser.Parse(ms);
+            }
+        }
+        catch (Exception ex)
+        {
+            parseResult = new ParseResult();
+            parseResult.FileErrors.Add($"Не удалось обработать файл: {ex.Message}");
+        }
+        finally
+        {
+            isParsing = false;
+        }
+    }
+
+    private async Task DownloadTemplateAsync()
+    {
+        isGenerating = true;
+        try
+        {
+            await DownloadBytesAsync("Шаблон_коды_маркировки.xlsx", ExcelTemplate.GenerateTemplate());
+        }
+        finally
+        {
+            isGenerating = false;
+        }
+    }
+
+    private async Task DownloadXmlAsync()
+    {
+        if (parseResult is null || !CanGenerate) return;
+        var validRows = parseResult.Rows.Where(r => r.IsValid).ToList();
+        if (validRows.Count == 0) return;
+
+        isGeneratingXml = true;
+        try
+        {
+            var p = BuildParams();
+            await DownloadBytesAsync(XmlBuilder.FileName(docType), XmlBuilder.Build(validRows, p));
+        }
+        finally
+        {
+            isGeneratingXml = false;
+        }
+    }
+
+    private async Task DownloadBytesAsync(string fileName, byte[] bytes)
+    {
+        using var stream = new MemoryStream(bytes);
+        using var streamRef = new DotNetStreamReference(stream);
+        await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+    }
+
+    private async Task OnMainXsdSelected(InputFileChangeEventArgs e)
+    {
+        mainXsdBytes = await ReadBytesAsync(e.File);
+        mainXsdName = e.File.Name;
+        validationResult = null;
+    }
+
+    private async Task OnBaseXsdSelected(InputFileChangeEventArgs e)
+    {
+        baseXsdBytes = await ReadBytesAsync(e.File);
+        baseXsdName = e.File.Name;
+        validationResult = null;
+    }
+
+    private static async Task<byte[]> ReadBytesAsync(IBrowserFile file)
+    {
+        using var ms = new MemoryStream();
+        await file.OpenReadStream(MaxXsdSize).CopyToAsync(ms);
+        return ms.ToArray();
+    }
+
+    private async Task ValidateAsync()
+    {
+        if (!CanGenerate || mainXsdBytes is null || baseXsdBytes is null) return;
+
+        isValidating = true;
+        validationResult = null;
+        try
+        {
+            var validRows = parseResult!.Rows.Where(r => r.IsValid).ToList();
+            var xml = XmlBuilder.Build(validRows, BuildParams());
+            // Уступаем поток UI, чтобы показать спиннер перед синхронной проверкой.
+            await Task.Yield();
+            validationResult = XsdValidation.Validate(xml, mainXsdBytes, baseXsdBytes);
+        }
+        finally
+        {
+            isValidating = false;
+        }
+    }
+}

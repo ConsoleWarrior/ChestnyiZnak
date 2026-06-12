@@ -1,0 +1,27 @@
+<introduce_import version="5">
+    <trade_participant_inn>7777777777</trade_participant_inn>
+    <declaration_date>2021-10-10</declaration_date>
+    <declaration_number>12345678/123456/1234567</declaration_number>
+    <customs_code>12345678</customs_code>
+    <decision_code>10</decision_code>
+    <products_list>
+        <product>
+            <kitu>222222222222222222</kitu>
+            <certificate_type>CONFORMITY_CERTIFICATE</certificate_type>
+            <certificate_number>1234</certificate_number>
+            <certificate_date>2021-10-10</certificate_date>
+            <certificate_document_data>
+                <product>
+                    <certificate_type>CONFORMITY_CERTIFICATE</certificate_type>
+                    <certificate_number>1234</certificate_number>
+                    <certificate_date>2021-10-10</certificate_date>
+                </product>
+                <product>
+                    <certificate_type>CONFORMITY_CERTIFICATE</certificate_type>
+                    <certificate_number>1234</certificate_number>
+                    <certificate_date>2021-10-10</certificate_date>
+                </product>
+            </certificate_document_data>
+        </product>
+    </products_list>
+</introduce_import>

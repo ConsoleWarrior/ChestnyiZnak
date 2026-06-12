@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <xs:include schemaLocation="../../commons/LP_base_types.xsd"/>
+    <xs:element name="introduce_import_fts" type="introduce_import_fts_type"/>
+    <xs:complexType name="introduce_import_fts_type">
+        <xs:annotation>
+            <xs:documentation>Ввод в оборот. Импорт с ФТС</xs:documentation>
+        </xs:annotation>
+        <xs:sequence>
+            <xs:element name="trade_participant_inn" type="inn_type">
+                <xs:annotation>
+                    <xs:documentation>ИНН участника оборота</xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="declaration_number" type="declaration_number_type">
+                <xs:annotation>
+                    <xs:documentation>Регистрационный номер ДТ</xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="declaration_date" type="xs:date">
+                <xs:annotation>
+                    <xs:documentation>Дата регистрации ДТ</xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="production_date" type="xs:date" minOccurs="0">
+                <xs:annotation>
+                    <xs:documentation>Дата производства. Только ТГ Молочная продукция</xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="products_list">
+                <xs:annotation>
+                    <xs:documentation>Список товаров</xs:documentation>
+                </xs:annotation>
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="product" maxOccurs="unbounded">
+                            <xs:annotation>
+                                <xs:documentation>Параметры товара</xs:documentation>
+                            </xs:annotation>
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="atk" type="atk_type" minOccurs="0">
+                                        <xs:annotation>
+                                            <xs:documentation>Агрегированный таможенный код</xs:documentation>
+                                        </xs:annotation>
+                                    </xs:element>
+                                    <xs:element name="ki" type="kit_type" minOccurs="0">
+                                        <xs:annotation>
+                                            <xs:documentation>Код идентификации</xs:documentation>
+                                        </xs:annotation>
+                                    </xs:element>
+                                    <xs:element name="kitu" type="kitu_type" minOccurs="0">
+                                        <xs:annotation>
+                                            <xs:documentation>Код идентификации транспортной упаковки</xs:documentation>
+                                        </xs:annotation>
+                                    </xs:element>
+                                    <xs:element name="color" type="string1024_type" minOccurs="0">
+                                        <xs:annotation>
+                                            <xs:documentation>Цвет. Только ТГ Одежда и Обувь</xs:documentation>
+                                        </xs:annotation>
+                                    </xs:element>
+                                    <xs:element name="product_size" type="string1024_type" minOccurs="0">
+                                        <xs:annotation>
+                                            <xs:documentation>Размер. Только ТГ Одежда и Обувь</xs:documentation>
+                                        </xs:annotation>
+                                    </xs:element>
+                                    <xs:element name="production_date" type="xs:date" minOccurs="0">
+                                        <xs:annotation>
+                                            <xs:documentation>Дата производства. Только ТГ Молочная продукция</xs:documentation>
+                                        </xs:annotation>
+                                    </xs:element>
+                                    <xs:element name="vsd_number" type="vsd_number_type" minOccurs="0">
+                                        <xs:annotation>
+                                            <xs:documentation>Идентификатор ветеринарно-сопроводительного документа. Только ТГ Молочная продукция</xs:documentation>
+                                        </xs:annotation>
+                                    </xs:element>
+                                    <xs:element name="children" minOccurs="0" type="children_introduce_import_fts_type">
+                                        <xs:annotation>
+                                            <xs:documentation>Список КИ/КИТУ в составе КИТУ</xs:documentation>
+                                        </xs:annotation>
+                                    </xs:element>
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+        <xs:attribute name="version" type="xs:int" use="required" fixed="3"/>
+    </xs:complexType>
+</xs:schema>

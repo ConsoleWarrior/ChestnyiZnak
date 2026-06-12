@@ -1,0 +1,14 @@
+# Сборка .NET
+bin/
+obj/
+bin-verify/
+obj-verify/
+*.user
+.vs/
+
+# Скретч-папка temp: оставляем только официальные схемы (temp/schemas/*.xsd|xml)
+temp/__MACOSX/
+temp/**/.DS_Store
+temp/Примеры XML с result_v1.38/
+temp/**/docs.crpt.ru.html
+temp/**/docs.crpt.ru_files/
