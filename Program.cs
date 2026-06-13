@@ -15,6 +15,7 @@ builder.Services.AddScoped<ExcelTemplateService>();
 builder.Services.AddScoped<ExcelParserService>();
 builder.Services.AddScoped<CsvCodeParserService>();
 builder.Services.AddScoped<IntroductionXmlService>();
+builder.Services.AddScoped<WithdrawalXmlService>();
 builder.Services.AddScoped<XsdValidationService>();
 
 // Заказ кодов маркировки

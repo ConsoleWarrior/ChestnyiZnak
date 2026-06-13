@@ -15,34 +15,50 @@
 
     <div class="row g-4 justify-content-center">
 
-        <div class="col-md-5">
+        <div class="col-md-4">
             <div class="card h-100 shadow-sm border-success">
                 <div class="card-body d-flex flex-column">
-                    <h5 class="card-title text-success">📦 Заказ кодов маркировки</h5>
+                    <h5 class="card-title text-success">📦 Заказ кодов</h5>
                     <p class="card-text text-muted flex-grow-1">
                         Нужно <b>получить новые коды</b> DataMatrix? Сформируйте XML-заказ
-                        по списку GTIN и количеству. Подходит для маркировки остатков и импорта.
+                        по списку GTIN и количеству.
                     </p>
-                    <span class="badge bg-success-subtle text-success-emphasis mb-3 align-self-start">
-                        Схема официальная (urn:oms.order)
+                    <span class="badge bg-warning-subtle text-warning-emphasis mb-3 align-self-start">
+                        Нужна ваша XSD из ЛК
                     </span>
                     <a href="order" class="btn btn-success">Перейти →</a>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-5">
+        <div class="col-md-4">
             <div class="card h-100 shadow-sm border-primary">
                 <div class="card-body d-flex flex-column">
                     <h5 class="card-title text-primary">✅ Ввод в оборот</h5>
                     <p class="card-text text-muted flex-grow-1">
-                        Коды <b>уже есть</b> и нужно ввести их в оборот? Загрузите список
-                        кодов DataMatrix и получите XML документа «Ввод в оборот. Производство РФ».
+                        Коды <b>уже есть</b> и надо ввести их в оборот? 5 типов: производство РФ,
+                        контракт, остатки, импорт с ФТС, вне ЕАЭС.
                     </p>
                     <span class="badge bg-primary-subtle text-primary-emphasis mb-3 align-self-start">
-                        Схема официальная (introduce_rf v9)
+                        Официальные XSD
                     </span>
                     <a href="introduction" class="btn btn-primary">Перейти →</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-danger">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title text-danger">📤 Вывод из оборота</h5>
+                    <p class="card-text text-muted flex-grow-1">
+                        Товар продан, экспортирован, списан или уничтожен? Сформируйте XML
+                        «Вывод из оборота» по списку кодов.
+                    </p>
+                    <span class="badge bg-primary-subtle text-primary-emphasis mb-3 align-self-start">
+                        Официальная XSD (v8)
+                    </span>
+                    <a href="withdrawal" class="btn btn-danger">Перейти →</a>
                 </div>
             </div>
         </div>

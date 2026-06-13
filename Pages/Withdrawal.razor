@@ -1,0 +1,447 @@
+@page "/withdrawal"
+@using System.Text
+@using System.Text.RegularExpressions
+@inject ExcelTemplateService ExcelTemplate
+@inject ExcelParserService ExcelParser
+@inject CsvCodeParserService CsvParser
+@inject WithdrawalXmlService XmlBuilder
+@inject XsdValidationService XsdValidation
+@inject IJSRuntime JS
+
+<PageTitle>Вывод из оборота — генератор XML | Честный Знак</PageTitle>
+
+<div class="container py-4">
+
+    <div class="text-center mb-5">
+        <h1 class="fw-bold">Вывод из оборота</h1>
+        <p class="lead text-muted">
+            Загрузите список кодов (КИ) и получите XML документа «Вывод из оборота»
+            (<code>withdrawal</code>) по официальной схеме ГИС МТ.
+        </p>
+        <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle p-2">
+            🔒 Всё считается в браузере · официальная XSD (version 8)
+        </span>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+
+            <!-- ШАГ 1 -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <span class="badge bg-primary rounded-circle me-2">1</span>
+                        Скачайте шаблон Excel
+                    </h5>
+                    <p class="card-text text-muted">
+                        Одна колонка — <b>Код маркировки</b> (КИ). Или используйте готовую CSV-выгрузку из СУЗ.
+                    </p>
+                    <button class="btn btn-primary btn-lg" @onclick="DownloadTemplateAsync" disabled="@isGenerating">
+                        @if (isGenerating)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            <span>Формируем файл…</span>
+                        }
+                        else
+                        {
+                            <span>⬇️ Скачать образец Excel</span>
+                        }
+                    </button>
+                </div>
+            </div>
+
+            <!-- ШАГ 2 -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <span class="badge bg-primary rounded-circle me-2">2</span>
+                        Загрузите коды
+                    </h5>
+                    <p class="card-text text-muted">
+                        Наш Excel-шаблон <b>или</b> CSV-выгрузка кодов из СУЗ/ЛК.
+                    </p>
+                    <InputFile class="form-control" accept=".xlsx,.csv,.txt" OnChange="OnFileSelectedAsync" disabled="@isParsing" />
+
+                    @if (isParsing)
+                    {
+                        <div class="mt-3 text-muted">
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            Читаем файл…
+                        </div>
+                    }
+
+                    @if (parseResult is not null && !isParsing)
+                    {
+                        @if (parseResult.FileErrors.Count > 0)
+                        {
+                            <div class="alert alert-danger mt-3 mb-0">
+                                @foreach (var err in parseResult.FileErrors)
+                                {
+                                    <div>⛔ @err</div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mt-3">
+                                <div class="d-flex gap-2 mb-2">
+                                    <span class="badge bg-success">Корректных кодов: @parseResult.ValidCount</span>
+                                    @if (parseResult.InvalidCount > 0)
+                                    {
+                                        <span class="badge bg-danger">С ошибками: @parseResult.InvalidCount</span>
+                                    }
+                                </div>
+                                <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+                                    <table class="table table-sm table-bordered align-middle small mb-0">
+                                        <thead class="table-light position-sticky top-0">
+                                            <tr>
+                                                <th style="width: 40px;">#</th>
+                                                <th>Код (КИ)</th>
+                                                <th style="width: 70px;">Статус</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var row in parseResult.Rows)
+                                            {
+                                                <tr class="@(row.IsValid ? "" : "table-danger")">
+                                                    <td class="text-muted">@row.RowNumber</td>
+                                                    <td class="text-break font-monospace">@row.MarkingCode</td>
+                                                    <td>@(row.IsValid ? "✓" : "✗")</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+
+            <!-- ШАГ 3 -->
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <span class="badge bg-primary rounded-circle me-2">3</span>
+                        Реквизиты и скачивание XML
+                    </h5>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">ИНН участника оборота</label>
+                            <input class="form-control @InnCssClass(participantInn)" @bind="participantInn" @bind:event="oninput" placeholder="10 или 12 цифр" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Дата вывода из оборота</label>
+                            <input type="date" class="form-control" @bind="withdrawalDate" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Причина вывода</label>
+                            <select class="form-select" @bind="reasonCode">
+                                @foreach (var kv in WithdrawalXmlService.Reasons)
+                                {
+                                    <option value="@kv.Value">@kv.Key</option>
+                                }
+                            </select>
+                        </div>
+                        @if (reasonCode == WithdrawalXmlService.OtherReasonCode)
+                        {
+                            <div class="col-md-6">
+                                <label class="form-label">Другая причина (текстом)</label>
+                                <input class="form-control" @bind="otherReason" @bind:event="oninput" placeholder="Укажите причину" />
+                            </div>
+                        }
+                        <div class="col-md-6">
+                            <label class="form-label">ИНН покупателя <span class="text-muted">(необязательно)</span></label>
+                            <input class="form-control @(string.IsNullOrEmpty(buyerInn) ? "" : InnCssClass(buyerInn))" @bind="buyerInn" @bind:event="oninput" placeholder="если есть" />
+                        </div>
+                    </div>
+
+                    <details class="mb-3">
+                        <summary class="text-muted small">Первичный документ (необязательно)</summary>
+                        <div class="row g-3 mt-1">
+                            <div class="col-md-4">
+                                <label class="form-label">Тип</label>
+                                <select class="form-select" @bind="primaryDocTypeCode">
+                                    <option value="">— не указывать —</option>
+                                    @foreach (var kv in WithdrawalXmlService.PrimaryDocTypes)
+                                    {
+                                        <option value="@kv.Value">@kv.Key</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Номер</label>
+                                <input class="form-control" @bind="primaryDocNumber" placeholder="№ документа" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Дата</label>
+                                <input type="date" class="form-control" @bind="primaryDocDate" />
+                            </div>
+                        </div>
+                    </details>
+
+                    <button class="btn btn-success btn-lg" @onclick="DownloadXmlAsync" disabled="@(!CanGenerate || isGeneratingXml)">
+                        @if (isGeneratingXml)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            <span>Формируем XML…</span>
+                        }
+                        else
+                        {
+                            <span>⬇️ Сформировать и скачать XML</span>
+                        }
+                    </button>
+
+                    @if ((parseResult?.ValidCount ?? 0) == 0)
+                    {
+                        <div class="form-text">Кнопка станет активной после загрузки кодов (Шаг 2).</div>
+                    }
+                    else if (!CanGenerate)
+                    {
+                        <div class="form-text text-warning-emphasis">Заполните обязательные поля: ИНН (10/12 цифр), дату и причину.</div>
+                    }
+                </div>
+            </div>
+
+            <!-- ШАГ 4: проверка по XSD -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <span class="badge bg-secondary rounded-circle me-2">4</span>
+                        Проверка по официальной XSD <span class="text-muted fs-6">(необязательно)</span>
+                    </h5>
+                    <div class="alert alert-light border small">
+                        Где взять: <a href="https://docs.crpt.ru/gismt/Раздел_шаблоны_документов/" target="_blank">страница шаблонов ГИС МТ</a>
+                        → <b>Вывод_из_оборота.xsd</b> и <b>LP_base_types.xsd</b>.
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Основная схема (Вывод_из_оборота.xsd)</label>
+                            <InputFile class="form-control" accept=".xsd" OnChange="OnMainXsdSelected" />
+                            @if (mainXsdName is not null)
+                            {
+                                <div class="form-text text-success">✓ @mainXsdName</div>
+                            }
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Базовые типы (LP_base_types.xsd)</label>
+                            <InputFile class="form-control" accept=".xsd" OnChange="OnBaseXsdSelected" />
+                            @if (baseXsdName is not null)
+                            {
+                                <div class="form-text text-success">✓ @baseXsdName</div>
+                            }
+                        </div>
+                    </div>
+                    <button class="btn btn-outline-secondary mt-3" @onclick="ValidateAsync"
+                            disabled="@(!CanGenerate || mainXsdBytes is null || baseXsdBytes is null || isValidating)">
+                        @if (isValidating)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            <span>Проверяем…</span>
+                        }
+                        else
+                        {
+                            <span>🔍 Проверить XML по схеме</span>
+                        }
+                    </button>
+
+                    @if (validationResult is not null)
+                    {
+                        @if (validationResult.IsValid)
+                        {
+                            <div class="alert alert-success mt-3 mb-0">✅ XML соответствует схеме.</div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-danger mt-3 mb-0">
+                                <div class="fw-bold mb-1">❌ Найдены несоответствия:</div>
+                                <ul class="mb-0 small">
+                                    @foreach (var m in validationResult.Messages)
+                                    {
+                                        <li>@m</li>
+                                    }
+                                </ul>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h6 class="card-title">Что это</h6>
+                    <p class="small text-muted mb-0">
+                        «Вывод из оборота» — финальный этап: розничная продажа, экспорт, списание,
+                        уничтожение, собственные нужды и т.д. Коды берём из той же выгрузки СУЗ.
+                    </p>
+                </div>
+            </div>
+            <div class="border rounded d-flex align-items-center justify-content-center text-muted small bg-light"
+                 style="min-height: 250px;">
+                Рекламный блок РСЯ
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@code {
+    private bool isGenerating;
+    private bool isGeneratingXml;
+    private bool isParsing;
+    private ParseResult? parseResult;
+
+    // Реквизиты
+    private string participantInn = "";
+    private DateOnly? withdrawalDate = DateOnly.FromDateTime(DateTime.Today);
+    private string reasonCode = "RETAIL";
+    private string otherReason = "";
+    private string buyerInn = "";
+    private string primaryDocTypeCode = "";
+    private string primaryDocNumber = "";
+    private DateOnly? primaryDocDate;
+
+    // XSD-валидация
+    private bool isValidating;
+    private byte[]? mainXsdBytes;
+    private byte[]? baseXsdBytes;
+    private string? mainXsdName;
+    private string? baseXsdName;
+    private XsdValidationService.Result? validationResult;
+
+    private const long MaxFileSize = 10 * 1024 * 1024;
+    private const long MaxXsdSize = 5 * 1024 * 1024;
+
+    private static bool IsInnValid(string inn) => Regex.IsMatch(inn?.Trim() ?? "", @"^\d{10}$|^\d{12}$");
+    private static string InnCssClass(string inn)
+        => string.IsNullOrEmpty(inn) ? "" : (IsInnValid(inn) ? "is-valid" : "is-invalid");
+
+    private bool CanGenerate =>
+        (parseResult?.ValidCount ?? 0) > 0 &&
+        IsInnValid(participantInn) &&
+        withdrawalDate is not null &&
+        (reasonCode != WithdrawalXmlService.OtherReasonCode || !string.IsNullOrWhiteSpace(otherReason)) &&
+        (string.IsNullOrWhiteSpace(buyerInn) || IsInnValid(buyerInn));
+
+    private async Task OnFileSelectedAsync(InputFileChangeEventArgs e)
+    {
+        isParsing = true;
+        parseResult = null;
+        try
+        {
+            var name = e.File.Name.ToLowerInvariant();
+            if (name.EndsWith(".csv") || name.EndsWith(".txt"))
+            {
+                using var reader = new StreamReader(
+                    e.File.OpenReadStream(MaxFileSize), Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+                parseResult = CsvParser.Parse(await reader.ReadToEndAsync());
+            }
+            else
+            {
+                using var ms = new MemoryStream();
+                await e.File.OpenReadStream(MaxFileSize).CopyToAsync(ms);
+                ms.Position = 0;
+                parseResult = ExcelParser.Parse(ms);
+            }
+        }
+        catch (Exception ex)
+        {
+            parseResult = new ParseResult();
+            parseResult.FileErrors.Add($"Не удалось обработать файл: {ex.Message}");
+        }
+        finally
+        {
+            isParsing = false;
+        }
+    }
+
+    private async Task DownloadTemplateAsync()
+    {
+        isGenerating = true;
+        try
+        {
+            await DownloadBytesAsync("Шаблон_коды_маркировки.xlsx", ExcelTemplate.GenerateTemplate());
+        }
+        finally
+        {
+            isGenerating = false;
+        }
+    }
+
+    private WithdrawalXmlService.WithdrawalParams BuildParams() => new(
+        participantInn.Trim(),
+        reasonCode,
+        withdrawalDate!.Value,
+        WithdrawalTypeOther: reasonCode == WithdrawalXmlService.OtherReasonCode ? otherReason.Trim() : null,
+        BuyerInn: string.IsNullOrWhiteSpace(buyerInn) ? null : buyerInn.Trim(),
+        PrimaryDocTypeCode: string.IsNullOrWhiteSpace(primaryDocTypeCode) ? null : primaryDocTypeCode,
+        PrimaryDocNumber: string.IsNullOrWhiteSpace(primaryDocNumber) ? null : primaryDocNumber.Trim(),
+        PrimaryDocDate: primaryDocDate);
+
+    private async Task DownloadXmlAsync()
+    {
+        if (!CanGenerate || parseResult is null) return;
+        var validRows = parseResult.Rows.Where(r => r.IsValid).ToList();
+        if (validRows.Count == 0) return;
+
+        isGeneratingXml = true;
+        try
+        {
+            await DownloadBytesAsync("vyvod_iz_oborota.xml", XmlBuilder.Build(validRows, BuildParams()));
+        }
+        finally
+        {
+            isGeneratingXml = false;
+        }
+    }
+
+    private async Task DownloadBytesAsync(string fileName, byte[] bytes)
+    {
+        using var stream = new MemoryStream(bytes);
+        using var streamRef = new DotNetStreamReference(stream);
+        await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+    }
+
+    private async Task OnMainXsdSelected(InputFileChangeEventArgs e)
+    {
+        mainXsdBytes = await ReadBytesAsync(e.File);
+        mainXsdName = e.File.Name;
+        validationResult = null;
+    }
+
+    private async Task OnBaseXsdSelected(InputFileChangeEventArgs e)
+    {
+        baseXsdBytes = await ReadBytesAsync(e.File);
+        baseXsdName = e.File.Name;
+        validationResult = null;
+    }
+
+    private static async Task<byte[]> ReadBytesAsync(IBrowserFile file)
+    {
+        using var ms = new MemoryStream();
+        await file.OpenReadStream(MaxXsdSize).CopyToAsync(ms);
+        return ms.ToArray();
+    }
+
+    private async Task ValidateAsync()
+    {
+        if (!CanGenerate || mainXsdBytes is null || baseXsdBytes is null) return;
+        isValidating = true;
+        validationResult = null;
+        try
+        {
+            var validRows = parseResult!.Rows.Where(r => r.IsValid).ToList();
+            var xml = XmlBuilder.Build(validRows, BuildParams());
+            await Task.Yield();
+            validationResult = XsdValidation.Validate(xml, mainXsdBytes, baseXsdBytes);
+        }
+        finally
+        {
+            isValidating = false;
+        }
+    }
+}

@@ -125,7 +125,9 @@ public class IntroductionXmlService
 
     private static XElement ProductsList(List<MarkingRow> rows)
         => new XElement("products_list",
-            rows.Select(r => new XElement("product", new XElement("ki", r.MarkingCode))));
+            // КИ может содержать спецсимволы → оборачиваем в CDATA
+            // (по «Рекомендуемому алгоритму экранирования» ГИС МТ).
+            rows.Select(r => new XElement("product", new XElement("ki", new XCData(r.MarkingCode)))));
 
     private static void AddProductionDate(XElement root, DateOnly? date)
     {

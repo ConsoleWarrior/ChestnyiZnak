@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<withdrawal version="8">
+    <trade_participant_inn>7777777777</trade_participant_inn>
+    <withdrawal_type>OTHER</withdrawal_type>
+    <withdrawal_type_other>Описание другой причины</withdrawal_type_other>
+    <withdrawal_date>2024-01-13</withdrawal_date>
+    <primary_document_type>OTHER</primary_document_type>
+    <primary_document_number>123</primary_document_number>
+    <primary_document_date>2024-01-13</primary_document_date>
+    <primary_document_custom_name>Наименование первичного документа</primary_document_custom_name>
+    <products_list>
+        <product>
+            <cis>010464444444444421BEtVuGyhA0HO5</cis>
+        </product>
+    </products_list>
+</withdrawal>
