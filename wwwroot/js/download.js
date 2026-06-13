@@ -16,3 +16,16 @@ window.downloadFileFromStream = async (fileName, contentStreamReference) => {
     anchor.remove();
     URL.revokeObjectURL(url);
 };
+
+// Отправка цели (события) в Яндекс Метрику.
+// Молча бездействует, пока счётчик не подключён (window.ymCounterId не задан) —
+// поэтому вызовы в коде безопасны и до настройки Метрики.
+window.trackEvent = function (goal) {
+    try {
+        if (typeof ym === 'function' && window.ymCounterId) {
+            ym(window.ymCounterId, 'reachGoal', goal);
+        }
+    } catch (e) {
+        // Аналитика никогда не должна ломать приложение.
+    }
+};

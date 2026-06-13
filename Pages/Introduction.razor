@@ -518,6 +518,7 @@
         try
         {
             await DownloadBytesAsync("Шаблон_коды_маркировки.xlsx", ExcelTemplate.GenerateTemplate());
+            await JS.InvokeVoidAsync("trackEvent", "template_download");
         }
         finally
         {
@@ -537,6 +538,7 @@
             var p = BuildParams();
             await DownloadBytesAsync(XmlBuilder.FileName(docType), XmlBuilder.Build(validRows, p));
             xmlDownloaded = true;
+            await JS.InvokeVoidAsync("trackEvent", "xml_introduction");
         }
         finally
         {

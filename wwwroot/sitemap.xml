@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Карта сайта для поисковиков.
+  ВАЖНО: после покупки домена замени https://ВАШ-ДОМЕН на свой адрес во всех <loc>.
+  Дату <lastmod> обновляй при значимых изменениях страниц.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://ВАШ-ДОМЕН/</loc>
+    <lastmod>2026-06-13</lastmod>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://ВАШ-ДОМЕН/order</loc>
+    <lastmod>2026-06-13</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://ВАШ-ДОМЕН/introduction</loc>
+    <lastmod>2026-06-13</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://ВАШ-ДОМЕН/withdrawal</loc>
+    <lastmod>2026-06-13</lastmod>
+    <priority>0.8</priority>
+  </url>
+</urlset>

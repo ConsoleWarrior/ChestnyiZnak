@@ -354,6 +354,7 @@
         try
         {
             await DownloadBytesAsync("Шаблон_заказ_кодов.xlsx", OrderTemplate.GenerateTemplate());
+            await JS.InvokeVoidAsync("trackEvent", "template_download");
         }
         finally
         {
@@ -406,6 +407,7 @@
             {
                 await DownloadBytesAsync("zakaz_kodov.xml", xml);
                 xmlDownloaded = true;
+                await JS.InvokeVoidAsync("trackEvent", "xml_order");
             }
         }
         finally

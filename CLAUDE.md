@@ -80,4 +80,17 @@ productGroup=lp, cisType=UNIT, templateId=10. **Лимит 10 GTIN-позици�
   (рекомендуемый алгоритм экранирования ГИС МТ). CSV-парсер учитывает кавычки/разделители внутри кода.
 - Найти официальную XSD заказа (СУЗ) — довести «Заказ кодов» до боевого.
 - Подключить рекламу РСЯ (сейчас заглушки).
+- Аналитика: инфраструктура готова (JS `trackEvent` в download.js шлёт цели в Метрику;
+  вызовы расставлены — `template_download`, `xml_order`, `xml_introduction`, `xml_withdrawal`).
+  Осталось завести счётчик Метрики и вставить его код в `index.html` (placeholder в `<head>`),
+  затем создать в кабинете Метрики 4 одноимённые цели типа «JavaScript-событие».
+- Хостинг: НЕ BareMetal/Compute (это для серверных). Статику класть в Yandex Object Storage
+  (static hosting) + опц. Yandex Cloud CDN.
 - Перед прод-сборкой: проверить триминг System.Xml.Schema.
+- SEO: базовые теги готовы (`<title>`/description/OG в index.html, robots.txt, sitemap.xml, noscript-фолбэк).
+  После покупки домена — заменить плейсхолдеры `ВАШ-ДОМЕН` в sitemap.xml/robots.txt/canonical/og:url.
+  Зарегистрировать в Яндекс.Вебмастере и Google Search Console (подтверждение — meta-тег вставлю я или
+  файл-верификатор в wwwroot). ⚠️ Blazor WASM = клиентский рендер: роботы видят спиннер, не контент.
+  Надёжно индексируется только сырой HTML (title/description/noscript). Глубокий SEO по /order, /introduction
+  потребует пререндеринга (нет без билд-шага/сервера) — оценить, если выдачи будет мало.
+- Хостинг статики SPA: error document = index.html (иначе прямые ссылки /order при обновлении страницы → 404).

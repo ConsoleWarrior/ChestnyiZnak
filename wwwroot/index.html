@@ -4,12 +4,41 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Честный Знак — генератор XML «Ввод в оборот»</title>
+
+    <!-- ===== SEO ===== -->
+    <title>XML для Честного Знака онлайн — бесплатный генератор документов ГИС МТ</title>
+    <meta name="description" content="Бесплатный онлайн-генератор XML для системы маркировки «Честный Знак»: заказ кодов DataMatrix, ввод в оборот, вывод из оборота. Из Excel/CSV прямо в браузере — данные не уходят на сервер." />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#198754" />
+    <!-- После покупки домена раскомментируй и впиши свой адрес:
+    <link rel="canonical" href="https://ВАШ-ДОМЕН/" /> -->
+
+    <!-- Open Graph: красивая карточка при отправке ссылки в Telegram/WhatsApp/соцсети -->
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="ru_RU" />
+    <meta property="og:title" content="XML для Честного Знака онлайн — бесплатный генератор" />
+    <meta property="og:description" content="Заказ кодов, ввод и вывод из оборота для ГИС МТ. Из Excel/CSV прямо в браузере, без отправки данных на сервер." />
+    <!-- <meta property="og:url" content="https://ВАШ-ДОМЕН/" /> -->
+    <meta property="og:image" content="img/logo.svg" />
+
     <base href="/" />
     <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="css/app.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link href="ChestnyiZnak.styles.css" rel="stylesheet" />
+
+    <!-- ===== ЯНДЕКС МЕТРИКА =====
+         Когда заведёшь счётчик на metrica.yandex.ru:
+         1) раскомментируй блок ниже;
+         2) впиши номер счётчика в window.ymCounterId И в сам код счётчика (вместо XXXXXXXX);
+         3) вставь полный код счётчика из кабинета Метрики на место отметки.
+         До этого аналитика молча не работает — приложение не ломается.
+
+    <script type="text/javascript">
+        window.ymCounterId = XXXXXXXX;
+        // … сюда вставить код счётчика из кабинета Яндекс Метрики …
+    </script>
+    -->
 </head>
 
 <body>
@@ -19,11 +48,27 @@
             <circle r="40%" cx="50%" cy="50%" />
         </svg>
         <div class="loading-progress-text"></div>
+
+        <!-- Запасной контент для поисковых роботов и браузеров без JS.
+             Blazor затирает его, как только загрузится WebAssembly. -->
+        <noscript>
+            <h1>XML для «Честного Знака» — бесплатный онлайн-генератор документов ГИС МТ</h1>
+            <p>
+                Сервис готовит XML-документы для системы маркировки «Честный Знак» из обычного
+                Excel или CSV — прямо в браузере, без отправки данных на сервер.
+            </p>
+            <ul>
+                <li>Заказ кодов маркировки DataMatrix (GTIN + количество)</li>
+                <li>Ввод в оборот: производство РФ, контракт, остатки, импорт с ФТС, вне ЕАЭС</li>
+                <li>Вывод из оборота по списку кодов</li>
+            </ul>
+            <p>Для работы сервиса включите JavaScript.</p>
+        </noscript>
     </div>
 
     <div id="blazor-error-ui">
-        An unhandled error has occurred.
-        <a href="." class="reload">Reload</a>
+        Произошла непредвиденная ошибка.
+        <a href="." class="reload">Перезагрузить</a>
         <span class="dismiss">🗙</span>
     </div>
     <script src="_framework/blazor.webassembly.js"></script>
