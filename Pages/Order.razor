@@ -184,6 +184,8 @@
                         ⚠️ Официальной XSD-схемы заказа у нас нет — она доступна только в вашем личном кабинете
                         (СУЗ / раздел «Помощь»). Чтобы не отдать вам файл, который СУЗ отклонит, заказ формируется
                         <b>только после того, как вы приложите официальную XSD</b> — и сразу проверяется по ней.
+                        Набор «способов выпуска» ниже взят из неофициального источника и может быть неполным
+                        (например, для обычного производства РФ значение появится после сверки с вашей XSD).
                     </div>
 
                     <div class="row g-3 mb-3">
@@ -267,6 +269,11 @@
                             ✅ XML соответствует вашей схеме — файл скачан.
                         </div>
                     }
+
+                    @if (xmlDownloaded)
+                    {
+                        <FeedbackBanner />
+                    }
                 </div>
             </div>
 
@@ -297,6 +304,7 @@
     private bool isGenerating;
     private bool isGeneratingXml;
     private bool isParsing;
+    private bool xmlDownloaded;
     private OrderParseResult? parseResult;
 
     // Лимит ГИС МТ: максимум 10 товарных позиций (GTIN) в одном файле заказа.
@@ -395,7 +403,10 @@
             validationResult = XsdValidation.Validate(xml, orderXsdBytes, orderIncludeBytes);
 
             if (validationResult.IsValid)
+            {
                 await DownloadBytesAsync("zakaz_kodov.xml", xml);
+                xmlDownloaded = true;
+            }
         }
         finally
         {

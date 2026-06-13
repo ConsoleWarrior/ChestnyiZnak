@@ -263,6 +263,11 @@
                     {
                         <div class="form-text text-warning-emphasis">Заполните все обязательные поля корректно (ИНН — 10 или 12 цифр).</div>
                     }
+
+                    @if (xmlDownloaded)
+                    {
+                        <FeedbackBanner />
+                    }
                 </div>
             </div>
 
@@ -355,8 +360,9 @@
                 <div class="card-body">
                     <h6 class="card-title">Типы документов</h6>
                     <p class="small text-muted mb-0">
-                        Поддержаны: <b>производство РФ</b>, <b>контрактное производство</b> и
-                        <b>маркировка остатков</b> — выберите тип в Шаге 3. Импорт с ФТС добавим отдельно.
+                        Поддержаны все 5 способов: <b>производство РФ</b>, <b>контрактное производство</b>,
+                        <b>маркировка остатков</b>, <b>импорт с ФТС</b> и <b>производство вне ЕАЭС</b> —
+                        выберите тип в Шаге 3.
                     </p>
                 </div>
             </div>
@@ -374,6 +380,7 @@
     private bool isGenerating;
     private bool isGeneratingXml;
     private bool isParsing;
+    private bool xmlDownloaded;
     private ParseResult? parseResult;
 
     // Тип документа и реквизиты
@@ -524,6 +531,7 @@
         {
             var p = BuildParams();
             await DownloadBytesAsync(XmlBuilder.FileName(docType), XmlBuilder.Build(validRows, p));
+            xmlDownloaded = true;
         }
         finally
         {
