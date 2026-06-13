@@ -1,5 +1,4 @@
 User-agent: *
 Allow: /
 
-# После покупки домена впиши его сюда (полный адрес до sitemap.xml):
-# Sitemap: https://ВАШ-ДОМЕН/sitemap.xml
+Sitemap: https://markirovka-xml.ru/sitemap.xml
