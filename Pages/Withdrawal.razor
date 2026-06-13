@@ -101,7 +101,7 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach (var row in parseResult.Rows)
+                                            @foreach (var row in parseResult.Rows.Take(PreviewLimit))
                                             {
                                                 <tr class="@(row.IsValid ? "" : "table-danger")">
                                                     <td class="text-muted">@row.RowNumber</td>
@@ -112,6 +112,10 @@
                                         </tbody>
                                     </table>
                                 </div>
+                                @if (parseResult.Rows.Count > PreviewLimit)
+                                {
+                                    <div class="form-text">Показаны первые @PreviewLimit из @parseResult.Rows.Count строк. В файл попадут все корректные.</div>
+                                }
                             </div>
                         }
                     }
@@ -324,6 +328,7 @@
 
     private const long MaxFileSize = 10 * 1024 * 1024;
     private const long MaxXsdSize = 5 * 1024 * 1024;
+    private const int PreviewLimit = 200; // показываем в превью не больше строк (в файл идут все)
 
     private static bool IsInnValid(string inn) => Regex.IsMatch(inn?.Trim() ?? "", @"^\d{10}$|^\d{12}$");
     private static string InnCssClass(string inn)

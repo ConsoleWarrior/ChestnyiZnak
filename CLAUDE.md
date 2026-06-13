@@ -61,7 +61,8 @@ productGroup=lp, cisType=UNIT, templateId=10. **Лимит 10 GTIN-позици�
   Импорт_с_ФТС, Производство_вне_ЕАЭС, LP_base_types).
 - `Services/XsdValidationService.cs` — проверка XML по XSD в браузере. Пользователь грузит схему сам
   (она обновляется). `xs:include` базовых типов резолвится кастомным `XmlResolver`.
-  ⚠️ При `dotnet publish` с тримингом проследить, чтобы не вырезался `System.Xml.Schema`.
+  Триминг при publish закрыт: в .csproj `<TrimmerRootAssembly Include="System.Private.Xml" />`
+  (иначе валидация могла молча сломаться в Release-сборке).
 
 ## Домен: КИ vs КМ
 - **КИ** (код идентификации) = `01`+GTIN(14)+`21`+серийник — это и нужно для «Ввода в оборот».
