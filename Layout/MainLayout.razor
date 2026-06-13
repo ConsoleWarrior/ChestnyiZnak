@@ -1,4 +1,7 @@
 ﻿@inherits LayoutComponentBase
+@implements IDisposable
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
 <div class="page">
     <div class="sidebar">
         <NavMenu />
@@ -20,3 +23,19 @@
         </footer>
     </main>
 </div>
+
+@code {
+    // Учёт переходов между разделами SPA в Яндекс Метрике.
+    // Первый просмотр считает init счётчика; здесь — все последующие переходы.
+    protected override void OnInitialized()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        _ = JS.InvokeVoidAsync("ymHit", e.Location);
+    }
+
+    public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
+}

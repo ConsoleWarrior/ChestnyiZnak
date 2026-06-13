@@ -29,3 +29,14 @@ window.trackEvent = function (goal) {
         // Аналитика никогда не должна ломать приложение.
     }
 };
+
+// Учёт просмотра «страницы» при переходе между разделами SPA.
+// Первый просмотр учитывает init Метрики; этот хелпер — последующие переходы.
+window.ymHit = function (url) {
+    try {
+        if (typeof ym === 'function' && window.ymCounterId) {
+            ym(window.ymCounterId, 'hit', url);
+        }
+    } catch (e) {
+    }
+};
